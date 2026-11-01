@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スマートカレンダー - Smart Calendar</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Noto Sans JP -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '"Noto Sans JP"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* スクロールバーのカスタマイズ */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.5);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(107, 114, 128, 0.7);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white transition-colors duration-200">
+
+  <!-- ヘッダーバー -->
+  <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 px-4 py-3 sm:px-6">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- ロゴ & 年月表示 -->
+      <div class="flex items-center space-x-3 sm:space-x-5">
+        <div class="flex items-center space-x-2 text-indigo-600 dark:text-indigo-400 font-bold text-xl tracking-tight">
+          <div class="p-2 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50 shadow-sm">
+            <i data-lucide="calendar" class="w-6 h-6"></i>
+          </div>
+          <span class="hidden sm:inline">カレンダー</span>
+        </div>
+
+        <!-- ナビゲーションボタン群 -->
+        <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+          <button id="prevBtn" class="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shadow-none hover:shadow-sm" title="前へ">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+          </button>
+          <button id="todayBtn" class="px-3 py-1 text-xs font-semibold rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors shadow-none hover:shadow-sm">
+            今日
+          </button>
+          <button id="nextBtn" class="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shadow-none hover:shadow-sm" title="次へ">
+            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <h1 id="currentDateLabel" class="text-lg sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-white select-none min-w-[130px]">
+          2026年 10月
+        </h1>
+        <!-- API同期ステータス表示バッジ -->
+        <div id="apiSyncStatus" class="hidden sm:inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500 font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/80" title="祝日データ状態">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>ハイブリッド祝日</span>
+        </div>
+      </div>
+
+      <!-- 右側アクションコントロール -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- 表示モード切り替え -->
+        <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs sm:text-sm font-medium">
+          <button data-view="month" class="view-btn px-2.5 py-1.5 rounded-lg transition-all duration-150 text-slate-600 dark:text-slate-400">月</button>
+          <button data-view="week" class="view-btn px-2.5 py-1.5 rounded-lg transition-all duration-150 text-slate-600 dark:text-slate-400">週</button>
+          <button data-view="day" class="view-btn px-2.5 py-1.5 rounded-lg transition-all duration-150 text-slate-600 dark:text-slate-400">日</button>
+        </div>
+
+        <!-- テーマ切り替えボタン -->
+        <button id="themeToggleBtn" class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="ダークモード切り替え">
+          <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+          <i data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 md:p-6 flex flex-col">
+    <!-- 各ビューコンテナ -->
+    <div id="calendarViewContainer" class="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col min-h-[600px]">
+      <!-- 動的に月/週/日ビューが挿入されます -->
+    </div>
+  </main>
+
+  <!-- アプリケーションロジック -->
+  <script>
+    // --- 祝日ハイブリッド管理 (自動計算 + API同期 + ローカルキャッシュ) ---
+    const API_CACHE_KEY_PREFIX = 'smart_cal_holidays_api_';
+
+    // 1. ハッピーマンデー（第n月曜日）の計算
+    function getNthMonday(year, month, n) {
+      const firstDay = new Date(year, month - 1, 1);
+      const firstDayOfWeek = firstDay.getDay(); // 0: 日, 1: 月
+      const offset = (firstDayOfWeek <= 1 ? 1 - firstDayOfWeek : 8 - firstDayOfWeek);
+      return 1 + offset + (n - 1) * 7;
+    }
+
+    // 春分の日 (天文学式)
+    function getVernalEquinoxDay(year) {
+      if (year < 1980 || year > 2099) return 20;
+      return Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    }
+
+    // 秋分の日 (天文学式)
+    function getAutumnalEquinoxDay(year) {
+      if (year < 1980 || year > 2099) return 23;
+      return Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    }
+
+    // 2. 自動計算ロジック (ベースライン)
+    function calculateHolidaysForYear(year) {
+      const holidays = {};
+
+      holidays[`${year}-01-01`] = '元日';
+      holidays[`${year}-01-${String(getNthMonday(year, 1, 2)).padStart(2, '0')}`] = '成人の日';
+      holidays[`${year}-02-11`] = '建国記念の日';
+      if (year >= 2020) {
+        holidays[`${year}-02-23`] = '天皇誕生日';
+      }
+      holidays[`${year}-03-${String(getVernalEquinoxDay(year)).padStart(2, '0')}`] = '春分の日';
+      holidays[`${year}-04-29`] = '昭和の日';
+      holidays[`${year}-05-03`] = '憲法記念日';
+      holidays[`${year}-05-04`] = 'みどりの日';
+      holidays[`${year}-05-05`] = 'こどもの日';
+
+      holidays[`${year}-07-${String(getNthMonday(year, 7, 3)).padStart(2, '0')}`] = '海の日';
+      if (year >= 2016) {
+        holidays[`${year}-08-11`] = '山の日';
+      }
+
+      const respectElderDay = getNthMonday(year, 9, 3);
+      const autumnEquinoxDay = getAutumnalEquinoxDay(year);
+      holidays[`${year}-09-${String(respectElderDay).padStart(2, '0')}`] = '敬老の日';
+      holidays[`${year}-09-${String(autumnEquinoxDay).padStart(2, '0')}`] = '秋分の日';
+
+      if (autumnEquinoxDay - respectElderDay === 2) {
+        holidays[`${year}-09-${String(respectElderDay + 1).padStart(2, '0')}`] = '国民の休日';
+      }
+
+      holidays[`${year}-10-${String(getNthMonday(year, 10, 2)).padStart(2, '0')}`] = 'スポーツの日';
+      holidays[`${year}-11-03`] = '文化の日';
+      holidays[`${year}-11-23`] = '勤労感謝の日';
+
+      // 振替休日判定
+      const sortedDates = Object.keys(holidays).sort();
+      sortedDates.forEach(dateStr => {
+        const d = new Date(dateStr + 'T00:00:00');
+        if (d.getDay() === 0) {
+          let substitute = new Date(d);
+          while (true) {
+            substitute.setDate(substitute.getDate() + 1);
+            const subStr = formatDateYMD(substitute);
+            if (!holidays[subStr]) {
+              holidays[subStr] = '振替休日';
+              break;
+            }
+          }
+        }
+      });
+
+      return holidays;
+    }
+
+    // 3. ハイブリッド・キャッシュ管理
+    const memoryHolidayCache = {};
+
+    function getHolidaysForYear(year) {
+      if (memoryHolidayCache[year]) {
+        return memoryHolidayCache[year];
+      }
+
+      // まずローカルストレージのAPIキャッシュをチェック
+      const cached = localStorage.getItem(API_CACHE_KEY_PREFIX + year);
+      if (cached) {
+        try {
+          memoryHolidayCache[year] = JSON.parse(cached);
+          return memoryHolidayCache[year];
+        } catch (e) {
+          // パース失敗時はフォールスルー
+        }
+      }
+
+      // キャッシュが無ければ即座に「自動計算データ」を適用（待たせない）
+      memoryHolidayCache[year] = calculateHolidaysForYear(year);
+
+      // 非同期でAPIから最新データをフェッチして上書き
+      fetchHolidaysFromAPI(year);
+
+      return memoryHolidayCache[year];
+    }
+
+    // 4. オープンAPI非同期取得 (内閣府データ準拠の祝日API)
+    const fetchingYears = new Set();
+    async function fetchHolidaysFromAPI(year) {
+      if (fetchingYears.has(year)) return;
+      fetchingYears.add(year);
+
+      try {
+        // holidays-jp.github.io の公開APIエンドポイント
+        const res = await fetch(`https://holidays-jp.github.io/api/v1/${year}/date.json`);
+        if (!res.ok) throw new Error('API request failed');
+        const apiData = await res.json();
+
+        // データが取得できたら自動計算値を公式APIデータでマージ＆上書き
+        if (apiData && typeof apiData === 'object' && Object.keys(apiData).length > 0) {
+          memoryHolidayCache[year] = {
+            ...calculateHolidaysForYear(year),
+            ...apiData
+          };
+          // ローカルストレージにキャッシュ保存
+          localStorage.setItem(API_CACHE_KEY_PREFIX + year, JSON.stringify(memoryHolidayCache[year]));
+
+          // 現在表示中の年と同じであれば再描画して最新化
+          if (state.currentDate.getFullYear() === year) {
+            render();
+          }
+        }
+      } catch (err) {
+        // オフラインまたはAPIエラー時は自動計算値のまま動作を継続（何も壊れない）
+      } finally {
+        fetchingYears.delete(year);
+      }
+    }
+
+    function getHolidayName(date) {
+      const year = date.getFullYear();
+      const holidays = getHolidaysForYear(year);
+      return holidays[formatDateYMD(date)] || null;
+    }
+
+    // 六曜簡易計算
+    const ROKUYO_LIST = ['大安', '赤口', '先勝', '友引', '先負', '仏滅'];
+
+    // --- State 管理 ---
+    const state = {
+      currentDate: new Date(),
+      view: 'month' // 'month', 'week', 'day'
+    };
+
+    const THEME_KEY = 'smart_calendar_theme';
+
+    // --- 日付ヘルパー関数 ---
+    function formatDateYMD(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function isSameDay(d1, d2) {
+      return (
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate()
+      );
+    }
+
+    // --- テーマ設定 ---
+    function initTheme() {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+    }
+
+    // --- カレンダー描画: ヘッダータイトル更新 ---
+    function updateDateLabel() {
+      const d = state.currentDate;
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      const label = document.getElementById('currentDateLabel');
+
+      if (state.view === 'month') {
+        label.textContent = `${y}年 ${m}月`;
+      } else if (state.view === 'week') {
+        const start = getWeekStart(d);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        if (start.getMonth() === end.getMonth()) {
+          label.textContent = `${y}年 ${m}月 第${Math.ceil(d.getDate() / 7)}週`;
+        } else {
+          label.textContent = `${start.getMonth() + 1}月〜${end.getMonth() + 1}月`;
+        }
+      } else if (state.view === 'day') {
+        const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+        label.textContent = `${y}年 ${m}月 ${d.getDate()}日 (${dayNames[d.getDay()]})`;
+      }
+    }
+
+    // 月曜始まりの週開始日を取得
+    function getWeekStart(date) {
+      const d = new Date(date);
+      const day = d.getDay(); // 0: 日, 1: 月, ... 6: 土
+      // 月曜を起点 (0日差) に換算: 月(1)->0, 火(2)->1, ..., 日(0)->6
+      const diffToMonday = (day + 6) % 7;
+      d.setDate(d.getDate() - diffToMonday);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    // --- 各ビューのレンダリング ---
+    function render() {
+      updateDateLabel();
+      updateViewButtons();
+
+      const container = document.getElementById('calendarViewContainer');
+      container.innerHTML = '';
+
+      if (state.view === 'month') {
+        renderMonthView(container);
+      } else if (state.view === 'week') {
+        renderWeekView(container);
+      } else if (state.view === 'day') {
+        renderDayView(container);
+      }
+
+      lucide.createIcons();
+    }
+
+    function updateViewButtons() {
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        if (btn.dataset.view === state.view) {
+          btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition-all duration-150 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 font-semibold shadow-sm';
+        } else {
+          btn.className = 'view-btn px-2.5 py-1.5 rounded-lg transition-all duration-150 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200';
+        }
+      });
+    }
+
+    // ==========================================
+    // 1. 月ビュー (Month View) - 月曜始まり & 土日色分け
+    // ==========================================
+    function renderMonthView(container) {
+      const y = state.currentDate.getFullYear();
+      const m = state.currentDate.getMonth();
+      const firstDay = new Date(y, m, 1);
+      // 月曜始まりのインデックス: 月(0), 火(1), 水(2), 木(3), 金(4), 土(5), 日(6)
+      const startDayIndex = (firstDay.getDay() + 6) % 7;
+      const lastDate = new Date(y, m + 1, 0).getDate();
+      const prevMonthLastDate = new Date(y, m, 0).getDate();
+
+      // 当月の最終日が含まれる週の日曜日で終わるよう総マス数を計算 (月末の週でちょうど終了)
+      const totalCellsNeeded = startDayIndex + lastDate;
+      const totalCells = Math.ceil(totalCellsNeeded / 7) * 7;
+
+      const today = new Date();
+      // 月曜日始まりのヘッダーラベル
+      const dayHeaders = [
+        { label: '月', colorClass: 'text-slate-600 dark:text-slate-300' },
+        { label: '火', colorClass: 'text-slate-600 dark:text-slate-300' },
+        { label: '水', colorClass: 'text-slate-600 dark:text-slate-300' },
+        { label: '木', colorClass: 'text-slate-600 dark:text-slate-300' },
+        { label: '金', colorClass: 'text-slate-600 dark:text-slate-300' },
+        { label: '土', colorClass: 'text-blue-700 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-900/40 font-bold' },
+        { label: '日', colorClass: 'text-rose-700 dark:text-rose-300 bg-rose-100/70 dark:bg-rose-900/40 font-bold' }
+      ];
+
+      let html = `
+        <div class="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 text-center text-xs font-semibold select-none">
+          ${dayHeaders.map(h => `
+            <div class="py-2.5 ${h.colorClass}">${h.label}</div>
+          `).join('')}
+        </div>
+        <div class="grid grid-cols-7 flex-1 auto-rows-fr select-none">
+      `;
+
+      let dayCounter = 1;
+      let nextMonthDayCounter = 1;
+
+      for (let i = 0; i < totalCells; i++) {
+        let cellDate;
+        let isCurrentMonth = false;
+
+        if (i < startDayIndex) {
+          const pDay = prevMonthLastDate - (startDayIndex - 1 - i);
+          cellDate = new Date(y, m - 1, pDay);
+        } else if (dayCounter <= lastDate) {
+          cellDate = new Date(y, m, dayCounter);
+          dayCounter++;
+          isCurrentMonth = true;
+        } else {
+          cellDate = new Date(y, m + 1, nextMonthDayCounter);
+          nextMonthDayCounter++;
+        }
+
+        const dateStr = formatDateYMD(cellDate);
+        const holiday = getHolidayName(cellDate);
+        const isToday = isSameDay(cellDate, today);
+        const dayOfWeek = cellDate.getDay(); // 0: 日, 6: 土
+
+        // 土曜・日曜・祝日の背景＆文字色判定（視認性を向上）
+        let cellBgClass = '';
+        let dateTextColor = 'text-slate-700 dark:text-slate-300';
+
+        if (dayOfWeek === 6) {
+          // 土曜日: よりはっきりとした薄青色
+          cellBgClass = isCurrentMonth 
+            ? 'bg-blue-100/50 dark:bg-blue-950/40' 
+            : 'bg-blue-50/30 dark:bg-blue-950/20 opacity-50';
+          dateTextColor = 'text-blue-700 dark:text-blue-300 font-bold';
+        } else if (dayOfWeek === 0 || holiday) {
+          // 日曜日 または 祝日: よりはっきりとした薄赤色
+          cellBgClass = isCurrentMonth 
+            ? 'bg-rose-100/50 dark:bg-rose-950/40' 
+            : 'bg-rose-50/30 dark:bg-rose-950/20 opacity-50';
+          dateTextColor = 'text-rose-700 dark:text-rose-300 font-bold';
+        } else if (!isCurrentMonth) {
+          cellBgClass = 'bg-slate-50/50 dark:bg-slate-950/40 opacity-40';
+        }
+
+        html += `
+          <div data-date="${dateStr}" class="calendar-cell min-h-[90px] sm:min-h-[110px] p-2 sm:p-2.5 border-b border-r border-slate-100 dark:border-slate-800/80 transition-colors hover:bg-slate-100/60 dark:hover:bg-slate-800/50 flex flex-col cursor-pointer ${cellBgClass}">
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center justify-center w-7 h-7 text-xs sm:text-sm rounded-full ${
+                isToday
+                  ? 'bg-indigo-600 text-white font-bold shadow-sm'
+                  : dateTextColor
+              }">
+                ${cellDate.getDate()}
+              </span>
+              ${holiday ? `<span class="text-[11px] text-rose-600 dark:text-rose-400 font-bold truncate max-w-[85px]">${holiday}</span>` : ''}
+            </div>
+            
+            <div class="mt-auto pt-2 flex justify-end">
+              <span class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                ${ROKUYO_LIST[(cellDate.getDate() + cellDate.getMonth()) % 6]}
+              </span>
+            </div>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+      container.innerHTML = html;
+
+      // 日付セルクリックでその日の日表示へ切り替え
+      container.querySelectorAll('.calendar-cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const [yy, mm, dd] = cell.dataset.date.split('-').map(Number);
+          state.currentDate = new Date(yy, mm - 1, dd);
+          state.view = 'day';
+          render();
+        });
+      });
+    }
+
+    // ==========================================
+    // 2. 週ビュー (Week View) - 月曜始まり & 土日色分け
+    // ==========================================
+    function renderWeekView(container) {
+      const weekStart = getWeekStart(state.currentDate);
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        days.push(d);
+      }
+
+      const today = new Date();
+      const dayNames = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+
+      let html = `
+        <div class="flex flex-col flex-1 divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto">
+          ${days.map(d => {
+            const isToday = isSameDay(d, today);
+            const dateStr = formatDateYMD(d);
+            const holiday = getHolidayName(d);
+            const rokuyo = ROKUYO_LIST[(d.getDate() + d.getMonth()) % 6];
+            const dayOfWeek = d.getDay(); // 0: 日, 6: 土
+
+            let rowBgClass = '';
+            let badgeClass = 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200';
+            let nameTextColor = 'text-slate-800 dark:text-slate-200';
+
+            if (isToday) {
+              rowBgClass = 'bg-indigo-50/60 dark:bg-indigo-950/30';
+              badgeClass = 'bg-indigo-600 text-white shadow-sm';
+            } else if (dayOfWeek === 6) {
+              rowBgClass = 'bg-blue-100/40 dark:bg-blue-950/30';
+              badgeClass = 'bg-blue-200/80 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-bold';
+              nameTextColor = 'text-blue-700 dark:text-blue-300 font-bold';
+            } else if (dayOfWeek === 0 || holiday) {
+              rowBgClass = 'bg-rose-100/40 dark:bg-rose-950/30';
+              badgeClass = 'bg-rose-200/80 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold';
+              nameTextColor = 'text-rose-700 dark:text-rose-300 font-bold';
+            }
+
+            return `
+              <div data-date="${dateStr}" class="week-row p-4 sm:p-5 flex items-center justify-between hover:bg-slate-100/50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer ${rowBgClass}">
+                <div class="flex items-center space-x-4">
+                  <div class="w-12 h-12 rounded-2xl flex flex-col items-center justify-center font-bold ${badgeClass}">
+                    <span class="text-xs leading-none font-normal opacity-80">${d.getMonth() + 1}月</span>
+                    <span class="text-lg leading-tight">${d.getDate()}</span>
+                  </div>
+                  <div>
+                    <div class="flex items-center space-x-2">
+                      <span class="font-semibold text-sm sm:text-base ${nameTextColor}">${dayNames[dayOfWeek]}</span>
+                      ${holiday ? `<span class="text-xs px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-300 font-medium">${holiday}</span>` : ''}
+                      ${isToday ? `<span class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 font-semibold">今日</span>` : ''}
+                    </div>
+                    <div class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                      六曜: ${rokuyo}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-slate-400">
+                  <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      container.innerHTML = html;
+
+      container.querySelectorAll('.week-row').forEach(row => {
+        row.addEventListener('click', () => {
+          const [yy, mm, dd] = row.dataset.date.split('-').map(Number);
+          state.currentDate = new Date(yy, mm - 1, dd);
+          state.view = 'day';
+          render();
+        });
+      });
+    }
+
+    // ==========================================
+    // 3. 日ビュー (Day View) - 閲覧専用
+    // ==========================================
+    function renderDayView(container) {
+      const d = state.currentDate;
+      const dateStr = formatDateYMD(d);
+      const holiday = getHolidayName(d);
+      const dayNames = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+      const dayOfWeek = d.getDay();
+      const isToday = isSameDay(d, new Date());
+      const rokuyo = ROKUYO_LIST[(d.getDate() + d.getMonth()) % 6];
+
+      // 年始からの日数・進捗率
+      const startOfYear = new Date(d.getFullYear(), 0, 1);
+      const dayOfYear = Math.floor((d - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+      const totalDays = ((d.getFullYear() % 4 === 0 && d.getFullYear() % 100 !== 0) || d.getFullYear() % 400 === 0) ? 366 : 365;
+      const yearProgress = Math.round((dayOfYear / totalDays) * 100);
+
+      // 日ビューのカード背景・アクセントカラー
+      let dayAccentClass = 'text-slate-800 dark:text-white';
+      let dayCardBorder = 'border-slate-100 dark:border-slate-800';
+
+      if (isToday) {
+        dayAccentClass = 'text-indigo-600 dark:text-indigo-400';
+      } else if (dayOfWeek === 6) {
+        dayAccentClass = 'text-blue-600 dark:text-blue-400';
+        dayCardBorder = 'border-blue-100 dark:border-blue-900/40 bg-blue-50/20 dark:bg-blue-950/10';
+      } else if (dayOfWeek === 0 || holiday) {
+        dayAccentClass = 'text-rose-600 dark:text-rose-400';
+        dayCardBorder = 'border-rose-100 dark:border-rose-900/40 bg-rose-50/20 dark:bg-rose-950/10';
+      }
+
+      let html = `
+        <div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div class="max-w-md w-full bg-slate-50/70 dark:bg-slate-800/40 rounded-3xl p-8 border ${dayCardBorder} shadow-sm flex flex-col items-center">
+            
+            <span class="text-sm font-semibold tracking-wider uppercase text-slate-500 dark:text-slate-400 mb-1">
+              ${d.getFullYear()}年
+            </span>
+            
+            <div class="text-7xl sm:text-8xl font-black tracking-tight my-2 ${dayAccentClass}">
+              ${d.getDate()}
+            </div>
+
+            <div class="text-lg font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <span>${d.getMonth() + 1}月</span>
+              <span>・</span>
+              <span class="${dayOfWeek === 0 || holiday ? 'text-rose-500' : dayOfWeek === 6 ? 'text-blue-500' : ''}">${dayNames[dayOfWeek]}</span>
+            </div>
+
+            ${holiday ? `
+              <div class="mt-3 px-3 py-1 rounded-full bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 text-xs font-semibold border border-rose-200 dark:border-rose-900">
+                祝日: ${holiday}
+              </div>
+            ` : ''}
+
+            <!-- 詳細情報カード -->
+            <div class="w-full grid grid-cols-2 gap-3 mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 text-left">
+              <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                <span class="text-[11px] text-slate-400 block font-medium">六曜</span>
+                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">${rokuyo}</span>
+              </div>
+              <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                <span class="text-[11px] text-slate-400 block font-medium">通日 / 進捗</span>
+                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">${dayOfYear}日目 (${yearProgress}%)</span>
+              </div>
+            </div>
+
+            <button id="backToMonthBtn" class="mt-6 text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold">
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+              月表示に戻る
+            </button>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+
+      const backBtn = container.querySelector('#backToMonthBtn');
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          state.view = 'month';
+          render();
+        });
+      }
+    }
+
+    // --- ナビゲーション処理 ---
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (state.view === 'month') {
+        state.currentDate.setMonth(state.currentDate.getMonth() - 1);
+      } else if (state.view === 'week') {
+        state.currentDate.setDate(state.currentDate.getDate() - 7);
+      } else if (state.view === 'day') {
+        state.currentDate.setDate(state.currentDate.getDate() - 1);
+      }
+      render();
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (state.view === 'month') {
+        state.currentDate.setMonth(state.currentDate.getMonth() + 1);
+      } else if (state.view === 'week') {
+        state.currentDate.setDate(state.currentDate.getDate() + 7);
+      } else if (state.view === 'day') {
+        state.currentDate.setDate(state.currentDate.getDate() + 1);
+      }
+      render();
+    });
+
+    document.getElementById('todayBtn').addEventListener('click', () => {
+      state.currentDate = new Date();
+      render();
+    });
+
+    // 表示切り替え
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.view = btn.dataset.view;
+        render();
+      });
+    });
+
+    document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+
+    // --- 初期起動処理 ---
+    window.onload = function() {
+      initTheme();
+      render();
+    };
+  </script>
+</body>
+</html>
